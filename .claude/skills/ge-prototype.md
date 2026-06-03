@@ -77,6 +77,8 @@ button { font-family: inherit; }
 `light.css` et `dark.css` sont des feuilles scopées aux classes CSS `.light` et `.dark`.
 Il faut **toggler les deux classes** sur le body — ne toggler que `.dark` laisse les variables de `light.css` inactives en mode clair.
 
+Le thème est **détecté automatiquement** depuis les préférences système (`prefers-color-scheme`). L'utilisateur peut l'overrider manuellement via le bouton dans le footer — le choix est persisté dans `localStorage`. Si aucun override, les changements de préférence système sont suivis en temps réel.
+
 ```tsx
 // src/context/ThemeContext.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -91,25 +93,40 @@ const ThemeContext = createContext<{
   toggleTheme: () => {},
 });
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem('ge-theme') as Theme) || 'light'
-  );
+function getSystemTheme(): Theme {
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [theme, setTheme] = useState<Theme>(() => {
+    const saved = localStorage.getItem('ge-theme') as Theme | null;
+    return saved ?? getSystemTheme();
+  });
+
+  // Sync CSS et classes body à chaque changement de thème
   useEffect(() => {
-    // Charger dynamiquement le bon fichier CSS
     const link = document.getElementById('theme-stylesheet') as HTMLLinkElement;
     if (link) {
       link.href = `https://static.app.ge.ch/theme/css/${theme}.css`;
     }
-
     // light.css → scoped à .light / dark.css → scoped à .dark
     // toggler les DEUX sinon les variables du thème actif ne s'appliquent pas
     document.body.classList.toggle('light', theme === 'light');
     document.body.classList.toggle('dark', theme === 'dark');
-
     localStorage.setItem('ge-theme', theme);
   }, [theme]);
+
+  // Suivre les changements de préférence système (sauf si override manuel)
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e: MediaQueryListEvent) => {
+      if (!localStorage.getItem('ge-theme')) {
+        setTheme(e.matches ? 'dark' : 'light');
+      }
+    };
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
 
@@ -199,7 +216,10 @@ Les variables s'adaptent automatiquement au thème actif (light/dark) — toujou
 
 ## Composants React réutilisables
 
-### Bouton primaire
+### Bouton primaire (filled)
+
+Hover : state layer blanc à 8% sur le fond `primary` + ombre elevation/1.
+
 ```tsx
 function BtnPrimary({ children, onClick, disabled }: {
   children: React.ReactNode;
@@ -225,6 +245,15 @@ function BtnPrimary({ children, onClick, disabled }: {
         border: 'none',
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.5 : 1,
+        transition: 'background 0.15s, box-shadow 0.15s',
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.background = 'color-mix(in srgb, var(--md-sys-color-primary) 92%, white)';
+        e.currentTarget.style.boxShadow = '0px 1px 2px rgba(24,31,37,0.08), 0px 1px 3px 1px rgba(24,31,37,0.15)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.background = 'var(--md-sys-color-primary)';
+        e.currentTarget.style.boxShadow = 'none';
       }}
     >
       {children}
@@ -234,16 +263,23 @@ function BtnPrimary({ children, onClick, disabled }: {
 ```
 
 ### Bouton secondaire (outlined)
+
+Hover : state layer `primary` à 8% d'opacité comme fond.
+
+> **`display: 'flex'` et non `inline-flex`** — `inline-flex` désaligne verticalement les icônes MDI.
+> **`alignSelf: 'flex-start'`** si le bouton est dans un conteneur `flex-direction: column` — sans ça il s'étire sur toute la largeur.
+
 ```tsx
-function BtnSecondary({ children, onClick }: {
+function BtnSecondary({ children, onClick, icon }: {
   children: React.ReactNode;
   onClick?: () => void;
+  icon?: string; // chemin MDI optionnel
 }) {
   return (
     <button
       onClick={onClick}
       style={{
-        display: 'inline-flex',
+        display: 'flex',            // flex (pas inline-flex) pour aligner les icônes
         alignItems: 'center',
         justifyContent: 'center',
         gap: 'calc(var(--spacing) * 2)',
@@ -256,9 +292,15 @@ function BtnSecondary({ children, onClick }: {
         color: 'var(--md-sys-color-primary)',
         border: '1px solid var(--md-sys-color-outline)',
         cursor: 'pointer',
+        whiteSpace: 'nowrap',
+        transition: 'background 0.15s',
+        alignSelf: 'flex-start',    // évite l'étirement dans un flex-column
       }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
       {children}
+      {icon && <Icon path={icon} size={0.75} />}
     </button>
   );
 }
@@ -596,12 +638,102 @@ App root (flex column, minHeight: 100vh, width: 100%)
     display: 'flex',
     flexDirection: 'column',
   }}>
-    {sidebarNav}
+    {/* nav items... */}
+
+    {/* Bouton CTA en bas de la sidebar — marginTop: auto pousse le bouton en bas */}
+    <button style={{ marginTop: 'auto', /* autres styles */ }}>
+      Action principale
+    </button>
   </aside>
   <div style={{ flex: 1, overflow: 'auto' }}>
     {children}
   </div>
 </div>
+```
+
+#### Sidebar collapsible — navigation rail
+
+La sidebar back-office supporte deux états gérés par un `useState(false)` dans le composant parent :
+
+- **Expanded** (`360px`) — icône + label + titre + CTA en bas
+- **Collapsed** (`80px`) — navigation rail : icônes seules dans des containers `56×56px`, sans labels
+
+Règles de design :
+- L'item actif garde le fond `secondary-container` dans les deux états
+- Le bouton CTA "Nouvelle démarche" est masqué en état collapsed
+- Le dropdown "Mes autres espaces" devient un badge circulaire `40px` en état collapsed
+- La largeur transite avec `transition: 'width 0.2s'`
+- `title={item.label}` sur chaque icône pour le tooltip natif du navigateur
+
+```tsx
+const NAV_ITEMS = [
+  { label: 'Accueil',            icon: mdiHome,              active: true  },
+  { label: 'Section 2',          icon: mdiEmailOutline,      active: false },
+  { label: 'Section 3',          icon: mdiCashMultiple,      active: false },
+  // ...
+];
+
+function NavigationDrawer({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {
+  return (
+    <aside style={{
+      width: collapsed ? '80px' : '360px',
+      minWidth: collapsed ? '80px' : '360px',
+      alignSelf: 'stretch',
+      background: 'var(--md-sys-color-surface-variant)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: collapsed ? 'center' : 'flex-start',
+      padding: '12px',
+      transition: 'width 0.2s, min-width 0.2s',
+      overflow: 'hidden',
+    }}>
+      {/* Toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', width: '100%', paddingLeft: collapsed ? 0 : '16px', paddingBlock: '18px' }}>
+        {!collapsed && <p style={{ fontWeight: 700, fontSize: '24px', margin: 0 }}>Titre</p>}
+        <button onClick={onToggle} style={{ background: 'transparent', border: 'none', cursor: 'pointer', transform: collapsed ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.2s' }}>
+          <Icon path={mdiChevronDoubleRight} size={0.9} />
+        </button>
+      </div>
+
+      {/* Nav items */}
+      <nav style={{ display: 'flex', flexDirection: 'column', width: '100%', alignItems: collapsed ? 'center' : 'flex-start' }}>
+        {NAV_ITEMS.map(item => collapsed ? (
+          // Rail mode — icône seule 56×56
+          <div key={item.label} title={item.label} style={{ width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '100px', background: item.active ? 'var(--md-sys-color-secondary-container)' : 'transparent', cursor: 'pointer' }}>
+            <Icon path={item.icon} size={1} color={item.active ? 'var(--md-sys-color-on-secondary-container)' : 'var(--md-sys-color-on-surface-variant)'} />
+          </div>
+        ) : (
+          // Expanded mode — icône + label
+          <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', width: '100%', borderRadius: '100px', background: item.active ? 'var(--md-sys-color-secondary-container)' : 'transparent', cursor: 'pointer' }}>
+            <Icon path={item.icon} size={0.85} color={item.active ? 'var(--md-sys-color-on-secondary-container)' : 'var(--md-sys-color-on-surface-variant)'} />
+            <span style={{ flex: 1, fontSize: '14px', fontWeight: 500, color: item.active ? 'var(--md-sys-color-on-secondary-container)' : 'var(--md-sys-color-on-surface-variant)', whiteSpace: 'nowrap' }}>
+              {item.label}
+            </span>
+          </div>
+        ))}
+      </nav>
+
+      {/* "Mes autres espaces" : badge 40px en collapsed, pill en expanded */}
+      {collapsed ? (
+        <div title="Mes autres espaces" style={{ width: '40px', height: '40px', borderRadius: '50px', background: 'var(--md-sys-color-surface)', boxShadow: '0px 1px 1px rgba(24,31,37,0.08), 0px 1px 2px rgba(24,31,37,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginTop: '8px' }}>
+          {/* icône ou logo réduit */}
+        </div>
+      ) : (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '8px 0', padding: '10px 16px', width: '100%', borderRadius: '50px', background: 'var(--md-sys-color-surface)', boxShadow: '0px 1px 1px rgba(24,31,37,0.08), 0px 1px 2px rgba(24,31,37,0.15)', cursor: 'pointer' }}>
+          <span style={{ flex: 1, fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap' }}>Mes autres espaces</span>
+          <Icon path={mdiChevronDown} size={0.75} />
+        </div>
+      )}
+
+      {/* CTA — masqué en collapsed, collé en bas via marginTop: auto en expanded */}
+      {!collapsed && (
+        <button style={{ marginTop: 'auto', width: '100%', /* styles outlined button */ }}>
+          <Icon path={mdiPlus} size={0.85} /> Nouvelle démarche
+        </button>
+      )}
+    </aside>
+  );
+}
 ```
 
 ```tsx
@@ -622,7 +754,7 @@ function BackofficeHeader() {
   }, []);
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
+    <div style={{ position: 'sticky', top: 0, width: '100%', zIndex: 100 }}>
       <ge-header ref={headerRef} />
       <button
         onClick={toggleTheme}
@@ -640,8 +772,10 @@ function BackofficeHeader() {
 }
 
 // Footer (portail et back-office)
+// Le bouton toggle thème est placé dans le footer, en absolu à droite sur le logo
 function AppFooter() {
   const footerRef = useRef<any>(null);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (footerRef.current) {
@@ -654,10 +788,34 @@ function AppFooter() {
     }
   }, []);
 
-  // Wrapper div nécessaire pour que ge-footer prenne 100% de la largeur
   return (
-    <div style={{ width: '100%' }}>
+    <div style={{ position: 'relative', width: '100%' }}>
       <ge-footer ref={footerRef} />
+      {/* Bouton thème positionné à droite sur le logo du footer */}
+      <button
+        onClick={toggleTheme}
+        style={{
+          position: 'absolute',
+          bottom: '50%',
+          right: 'calc(var(--spacing) * 4)',
+          transform: 'translateY(50%)',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '8px',
+          zIndex: 10,
+          color: 'var(--md-sys-color-on-surface)',
+          opacity: 0.7,
+        }}
+        aria-label={theme === 'light' ? 'Activer le mode sombre' : 'Activer le mode clair'}
+        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+        onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
+      >
+        <Icon path={theme === 'light' ? mdiWeatherNight : mdiWeatherSunny} size={0.9} />
+      </button>
     </div>
   );
 }

@@ -1,37 +1,109 @@
-# GE-Design-prototype — Utiliser la Claude skill `ge-prototype`
+# GE-Prototype Template
 
-But: expliquer rapidement comment utiliser la skill Claude qui génère des prototypes React à partir d'une maquette Figma.
+Template réutilisable pour générer rapidement des **prototypes interactifs React** fidèles au Design System GE-DESIGN.
 
-Prérequis
-- Accès au fichier Figma (la frame ciblée doit être partageable).
-- Agent Claude/Claude Code capable de lire les fichiers dans `.claude/skills` (ou accès manuel au fichier).
+## Démarrage rapide
 
-Commandes / usage
-1. Lire la skill : ouvrez ou demandez à l'agent de lire le fichier
+### 1. Cloner et installer
 
-   .claude/skills/ge-prototype.md
+```bash
+git clone https://github.com/ge-yannroy/GE-Design-prototype.git mon-prototype-gedesign
+cd mon-prototype-gedesign
+npm install
+```
 
-2. Demander l'implémentation d'une frame Figma
+### 2. Lancer Claude Code
 
-   Exemple (prompt à envoyer à l'agent Claude) :
+```bash
+claude
+```
 
-   Lis la skill dans .claude/skills/ge-prototype.md, puis implémente cette frame Figma : https://www.figma.com/design/... type = portail
+Claude Code chargera automatiquement la Claude skill `ge-prototype` (stockée en local dans `.claude/skills/`). La skill fourni tous les tokens, les composants React, et les patterns à utiliser.
 
-   - Remplacez `type = portail` par `type = back-office` si vous voulez la variante back-office.
-   - Indiquez le `node-id` si vous ciblez une frame précise (comme dans l'exemple).
+## Clients IA compatibles
 
-3. Résultat attendu
-- Un plan d'implémentation détaillé (liste de composants à créer, tokens, structure `src/`).
-- Fichiers React/TypeScript (ex. composants TSX, `index.html`, `ThemeContext`) ou instructions pour générer/assembler le prototype.
-- Liste des assets à exporter depuis Figma (images, icônes) et instructions de mapping des tokens.
+- La skill fonctionne depuis n'importe quel client web d'IA (par ex. ChatGPT, Gemini, Claude, Lovable). Tout le monde peut l'utiliser.
+- Remarque : les résultats sont généralement meilleurs lorsqu'on utilise **Claude Code** associé au connecteur Figma (MCP). Les autres clients restent compatibles, mais peuvent produire des sorties moins précises ou nécessiter des instructions complémentaires.
 
-Conseils
-- Précisez la langue (`fr`) si nécessaire.
-- Donnez des exemples supplémentaires de frames ou des variantes si vous souhaitez plusieurs sorties.
-- Si l'agent propose du code, validez et testez en local : `npm install` puis `npm run build` dans le projet généré.
+- La skill accepte aussi des captures d'écran (`.jpg`, `.png`). Vous pouvez fournir un lien public vers l'image ou la coller dans le client web. Les captures d'écran permettent d'obtenir un prototype quand la frame Figma n'est pas partageable, mais la précision structurelle peut être inférieure à une source Figma native.
 
-Fichiers utiles
-- Skill: [GE-Design-prototype/.claude/skills/ge-prototype.md](.claude/skills/ge-prototype.md)
+## Accessibilité et partage
 
-Support
-Pour toute question ou amélioration de la skill, modifiez le fichier de skill et testez avec des prompts localement.
+- Ce template et la skill sont conçues pour être accessibles et réutilisables par toute équipes : la skill est locale (`.claude/skills/ge-prototype.md`), versionnable et modifiable.
+- Objectif : permettre à n'importe quel contributeur de cloner le template, lancer l'IA et obtenir un prototype fonctionnel sans configuration complexe.
+
+### 3. Demander une implémentation Figma
+
+Dans Claude Code, envoyer un prompt comme :
+
+```
+Lis la skill dans .claude/skills/ge-prototype.md, puis implémente cette frame Figma :
+https://www.figma.com/design/.../node-id=115-6757
+type = back-office
+```
+
+Remplacer :
+- `node-id=115-6757` par votre frame spécifique
+- `type = portail` par `type = back-office` si nécessaire
+
+Claude générera :
+- ✅ Composants React réutilisables (ThemeContext, Buttons, Cards, etc.)
+- ✅ Structure `src/` complète avec pages et layout
+- ✅ CSS utilisant les tokens GE-DESIGN
+- ✅ Support du mode sombre intégré
+- ✅ Validation des formulaires (si applicable)
+
+## Structure du projet
+
+```
+src/
+  components/      # Composants React réutilisables
+  context/         # ThemeContext, AppContext pour state
+  pages/           # Pages du prototype
+  App.tsx
+  main.tsx
+  index.css
+  
+index.html         # Template avec CSS/webcomponents GE-THEME
+package.json
+tsconfig.json
+.claude/
+  skills/
+    ge-prototype.md # ← Claude skill (lue auto par Claude Code)
+```
+
+## Dépendances incluses
+
+- **React 18** + TypeScript
+- **Material Design Icons** (`@mdi/react`)
+- **React Hook Form** + Zod (validation)
+- **CSS** : variables GE-DESIGN (pas de Tailwind)
+
+## Tests locaux
+
+```bash
+npm run build        # Compiler TypeScript
+npm run dev          # Dev server local
+npm run lint         # ESLint check
+npm run lint:fix     # ESLint auto-fix
+```
+
+## Workflow
+
+1. **Ouvrir** le fichier Figma ciblé
+2. **Envoyer** le prompt à Claude (voir section 3 ci-dessus)
+3. **Tester** localement : `npm run dev`
+
+## Personnaliser la skill
+
+La skill est locale et versionnable. Pour l'adapter à votre équipe :
+
+1. Éditer `.claude/skills/ge-prototype.md`
+2. Ajouter des patterns React spécifiques (ex. : composants métier), ainsi que des régles métier
+3. Tester avec un prototype simple d'abord
+
+## Besoin d'aide ?
+
+- Skill complète : [`.claude/skills/ge-prototype.md`](.claude/skills/ge-prototype.md)
+- Support design system : ...
+- Issues : Créer une issue sur le repo
