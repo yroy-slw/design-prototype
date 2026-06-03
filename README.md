@@ -77,7 +77,7 @@ tsconfig.json
 - **React 18** + TypeScript
 - **Material Design Icons** (`@mdi/react`)
 - **React Hook Form** + Zod (validation)
-- **CSS** : variables GE-DESIGN (pas de Tailwind)
+- **CSS** : variables GE-DESIGN
 
 ## Tests locaux
 
