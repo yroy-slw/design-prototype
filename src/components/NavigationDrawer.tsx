@@ -171,9 +171,10 @@ export function NavigationDrawer({ collapsed, onToggle }: NavigationDrawerProps)
 
       <hr style={{ border: 'none', borderTop: '1px solid var(--md-sys-color-outline-variant, #d4d2cf)', margin: '8px 0', flexShrink: 0 }} />
 
-      {/* CTA button */}
+      {/* CTA button — collé en bas grâce à margin-top: auto */}
       <button
         style={{
+          marginTop: 'auto',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -189,7 +190,10 @@ export function NavigationDrawer({ collapsed, onToggle }: NavigationDrawerProps)
           width: '100%',
           flexShrink: 0,
           whiteSpace: 'nowrap',
+          transition: 'background 0.15s',
         }}
+        onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--md-sys-color-primary, #01629d) 8%, transparent)')}
+        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
       >
         <Icon path={mdiPlus} size={0.85} />
         Nouvelle démarche

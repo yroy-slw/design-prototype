@@ -1,0 +1,44 @@
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node.js dependencies and logs
+**/node_modules/
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Build output and generated files
+**/dist/
+**/out/
+**/build/
+**/coverage/
+**/code.js
+
+# Environment files
+.env
+.env.*
+
+# Temporary files
+*.tmp
+*.temp
+*.cache/
+
+# Parcel / Vite / Rollup
+.cache/
+**/.vite/
+
+# Local OS files
+*.DS_Store
+
+# Lock files are intentionally tracked by each package when needed

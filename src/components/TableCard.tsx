@@ -165,6 +165,15 @@ export function TableCard({ title, rows, onAdd, onExport }: TableCardProps) {
             fontWeight: 500,
             cursor: 'pointer',
             letterSpacing: '0.1px',
+            transition: 'background 0.15s, box-shadow 0.15s',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.background = 'color-mix(in srgb, var(--md-sys-color-primary, #01629d) 92%, white)';
+            e.currentTarget.style.boxShadow = '0px 1px 2px rgba(24,31,37,0.08), 0px 1px 3px 1px rgba(24,31,37,0.15)';
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.background = 'var(--md-sys-color-primary, #01629d)';
+            e.currentTarget.style.boxShadow = 'none';
           }}
         >
           <Icon path={mdiPlus} size={0.85} color="white" />
@@ -188,7 +197,10 @@ export function TableCard({ title, rows, onAdd, onExport }: TableCardProps) {
             cursor: 'pointer',
             letterSpacing: '0.1px',
             minWidth: '123px',
+            transition: 'background 0.15s',
           }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--md-sys-color-primary, #01629d) 8%, transparent)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
           Exporter
         </button>

@@ -46,7 +46,10 @@ export function InfoCard({ text, actionLabel, onAction }: InfoCardProps) {
             fontWeight: 500,
             cursor: 'pointer',
             letterSpacing: '0.1px',
+            transition: 'background 0.15s',
           }}
+          onMouseEnter={e => (e.currentTarget.style.background = 'color-mix(in srgb, var(--md-sys-color-primary, #01629d) 8%, transparent)')}
+          onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
         >
           {actionLabel}
         </button>
