@@ -15,7 +15,7 @@ Commandes / usage
 
    Exemple (prompt à envoyer à l'agent Claude) :
 
-   Lis la skill dans .claude/skills/ge-prototype.md, puis implémente cette frame Figma : https://www.figma.com/design/5vz8MB9IhQoGoWqkvRPHO7/ge-builder?node-id=115-6757 type = portail
+   Lis la skill dans .claude/skills/ge-prototype.md, puis implémente cette frame Figma : https://www.figma.com/design/... type = portail
 
    - Remplacez `type = portail` par `type = back-office` si vous voulez la variante back-office.
    - Indiquez le `node-id` si vous ciblez une frame précise (comme dans l'exemple).
